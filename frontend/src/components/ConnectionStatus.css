@@ -1,0 +1,17 @@
+.connection-status {
+  text-align: center;
+  padding: 5px;
+  font-size: 14px;
+}
+
+.status-connected {
+  color: green;
+}
+
+.status-connecting {
+  color: orange;
+}
+
+.status-disconnected {
+  color: red;
+}

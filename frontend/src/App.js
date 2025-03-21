@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
-import { format } from "date-fns";
 import { FiSend, FiUsers, FiMessageSquare, FiEdit } from "react-icons/fi";
-import "./App.css";
+import ChatMessage from "./components/ChatMessage/ChatMessage";
+import UsernameModal from "./components/UsernameModal/UsernameModal";
+import OnlineUsers from "./components/OnlineUsers/OnlineUsers";
+import ConnectionStatus from "./components/ConnectionStatus/ConnectionStatus";
 
-// Components
-import ChatMessage from "./components/ChatMessage";
-import UsernameModal from "./components/UsernameModal";
-import OnlineUsers from "./components/OnlineUsers";
-import ConnectionStatus from "./components/ConnectionStatus";
+import "./App.css";
 
 function App() {
   // State
@@ -32,9 +30,9 @@ function App() {
   // Connect to socket.io server
   useEffect(() => {
     // Use environment variable for server URL
-    const serverUrl =
-      process.env.REACT_APP_SERVER_URL || "http://localhost:5000";
+    const serverUrl = "http://localhost:5000";
     const newSocket = io(serverUrl);
+
     setSocket(newSocket);
 
     // Set connection status

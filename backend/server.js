@@ -1,4 +1,3 @@
-// src/server.js
 const http = require("http");
 const { Server } = require("socket.io");
 const app = require("./app");
@@ -16,21 +15,12 @@ const io = new Server(server, {
   },
 });
 
-// Set up socket handlers
+/**
+ * Setup Socket.IO event handlers. Add (message, join, disconnect etc.)
+ */
 setupSocketHandlers(io);
 
 // Start the server
 server.listen(config.PORT, () => {
   console.log(`Server running on port ${config.PORT}`);
-});
-
-// Graceful shutdown
-process.on("SIGINT", () => {
-  console.log("Shutting down server...");
-
-  // Close server
-  server.close(() => {
-    console.log("Server shut down successfully");
-    process.exit(0);
-  });
 });

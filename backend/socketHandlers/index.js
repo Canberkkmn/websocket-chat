@@ -1,4 +1,3 @@
-// src/socketHandlers/index.js
 const { v4: uuidv4 } = require("uuid");
 const { sanitizeMessage } = require("../utils");
 
@@ -6,7 +5,7 @@ const { sanitizeMessage } = require("../utils");
 const users = new Map();
 
 /**
- * Set up all socket event handlers
+ * When socket connects, set up event handlers
  * @param {Object} io - Socket.IO server instance
  */
 function setupSocketHandlers(io) {
@@ -26,8 +25,6 @@ function setupSocketHandlers(io) {
  */
 function handleConnection(socket, io) {
   const userId = uuidv4();
-
-  console.log(`User connected: ${userId}`);
 
   // Set default username
   users.set(socket.id, {

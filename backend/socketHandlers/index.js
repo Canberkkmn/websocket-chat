@@ -1,9 +1,16 @@
 const { v4: uuidv4 } = require("uuid");
 const { sanitizeMessage } = require("../utils");
 const config = require("../config");
+const redisClient = require("../utils/redisClient");
 
-// Store user information
-const users = new Map();
+/**
+ * Helper to get all online users from Redis
+ */
+async function getOnlineUsers() {
+  const onlineUsersMap = await redisClient.hGetAll("online_users");
+
+  return Object.values(onlineUsersMap).map((json) => JSON.parse(json));
+}
 
 /**
  * When socket connects, set up event handlers
@@ -26,29 +33,33 @@ function setupSocketHandlers(io) {
  * @param {Object} socket - The socket instance
  * @param {Object} io - Socket.IO server instance
  */
-function handleConnection(socket, io) {
-  const userId = uuidv4();
+async function handleConnection(socket, io) {
+  const userId = socket.handshake.auth.userId || uuidv4();
+  const username = `Guest-${userId.substring(0, 5)}`;
 
-  // Set default username
-  users.set(socket.id, {
+  const userData = {
     id: userId,
-    username: `Guest-${userId.substring(0, 5)}`,
-  });
+    username,
+  };
+
+  await redisClient.hSet("online_users", socket.id, JSON.stringify(userData));
 
   // Send initial connection info
   socket.emit("connection_established", {
     userId,
-    username: users.get(socket.id).username,
+    username: userData.username,
   });
 
   // Update online users list for everyone
-  io.emit("online_users", Array.from(users.values()));
+  const onlineUsers = await getOnlineUsers();
+
+  io.emit("online_users", onlineUsers);
 
   // Welcome message
   io.emit("message", {
     id: uuidv4(),
     username: "System",
-    text: `${users.get(socket.id).username} has joined the chat`,
+    text: `${username} has joined the chat`,
     timestamp: Date.now(),
     type: "system",
   });
@@ -60,10 +71,12 @@ function handleConnection(socket, io) {
  * @param {Object} io - Socket.IO server instance
  */
 function handleSendMessage(socket, io) {
-  socket.on("send_message", (messageData) => {
-    const user = users.get(socket.id);
+  socket.on("send_message", async (messageData) => {
+    const raw = await redisClient.hGet("online_users", socket.id);
 
-    if (!user) return;
+    if (!raw) return;
+
+    const user = JSON.parse(raw);
 
     const messageObject = {
       id: uuidv4(),
@@ -73,7 +86,6 @@ function handleSendMessage(socket, io) {
       timestamp: Date.now(),
       type: "user",
     };
-
     // Broadcast message to all users
     io.emit("message", messageObject);
   });
@@ -85,15 +97,17 @@ function handleSendMessage(socket, io) {
  * @param {Object} io - Socket.IO server instance
  */
 function handleChangeUsername(socket, io) {
-  socket.on("change_username", (data) => {
-    const user = users.get(socket.id);
+  socket.on("change_username", async (data) => {
+    const raw = await redisClient.hGet("online_users", socket.id);
 
-    if (!user) return;
+    if (!raw) return;
 
+    const user = JSON.parse(raw);
     const oldUsername = user.username;
-    
+
     user.username = sanitizeMessage(data.username).substring(0, 20);
-    users.set(socket.id, user);
+
+    await redisClient.hSet("online_users", socket.id, JSON.stringify(user));
 
     // Notify all users about the username change
     io.emit("message", {
@@ -105,7 +119,9 @@ function handleChangeUsername(socket, io) {
     });
 
     // Update online users list
-    io.emit("online_users", Array.from(users.values()));
+    const onlineUsers = await getOnlineUsers();
+
+    io.emit("online_users", onlineUsers);
   });
 }
 
@@ -115,10 +131,12 @@ function handleChangeUsername(socket, io) {
  * @param {Object} io - Socket.IO server instance
  */
 function handleTyping(socket, io) {
-  socket.on("typing", (data) => {
-    const user = users.get(socket.id);
+  socket.on("typing", async (data) => {
+    const raw = await redisClient.hGet("online_users", socket.id);
 
-    if (!user) return;
+    if (!raw) return;
+
+    const user = JSON.parse(raw);
 
     socket.broadcast.emit("user_typing", {
       userId: user.id,
@@ -134,15 +152,14 @@ function handleTyping(socket, io) {
  * @param {Object} io - Socket.IO server instance
  */
 function handleDisconnect(socket, io) {
-  socket.on("disconnect", () => {
-    const user = users.get(socket.id);
+  socket.on("disconnect", async () => {
+    const raw = await redisClient.hGet("online_users", socket.id);
 
-    if (!user) {
-      return;
-    }
+    if (!raw) return;
 
-    // Remove user from map
-    users.delete(socket.id);
+    const user = JSON.parse(raw);
+
+    await redisClient.hDel("online_users", socket.id);
 
     // Notify others that user has left
     io.emit("message", {
@@ -154,7 +171,9 @@ function handleDisconnect(socket, io) {
     });
 
     // Update online users list
-    io.emit("online_users", Array.from(users.values()));
+    const onlineUsers = await getOnlineUsers();
+
+    io.emit("online_users", onlineUsers);
   });
 }
 

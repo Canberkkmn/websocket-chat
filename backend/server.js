@@ -15,11 +15,15 @@ const io = new Server(server, {
     origin: config.CORS_ORIGIN,
     methods: config.CORS_METHODS,
   },
+  pingInterval: 5000,
+  pingTimeout: 3000,
 });
 const pubClient = createClient({ url: "redis://localhost:6379" });
 const subClient = pubClient.duplicate();
 
-Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
+Promise.all([pubClient.connect(), subClient.connect()]).then(async () => {
+  await pubClient.del("online_users");
+
   io.adapter(createAdapter(pubClient, subClient));
 
   // Setup Socket.IO event handlers. Add (message, join, disconnect etc.)

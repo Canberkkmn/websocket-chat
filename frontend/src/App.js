@@ -1,149 +1,58 @@
-import React, { useState, useEffect, useRef } from "react";
-import { io } from "socket.io-client";
-import { FiSend, FiUsers, FiMessageSquare, FiEdit } from "react-icons/fi";
+import React, { useState, useRef, useEffect } from "react";
+import {
+  FiSend,
+  FiUsers,
+  FiMessageSquare,
+  FiEdit
+} from "react-icons/fi";
 import ChatMessage from "./components/ChatMessage/ChatMessage";
 import UsernameModal from "./components/UsernameModal/UsernameModal";
 import OnlineUsers from "./components/OnlineUsers/OnlineUsers";
 import ConnectionStatus from "./components/ConnectionStatus/ConnectionStatus";
+import useChatSocket from "./hooks/useChatSocket";
 
 import "./App.css";
 
-function App() {
-  // State
-  const [socket, setSocket] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [messageInput, setMessageInput] = useState("");
-  const [userId, setUserId] = useState(null);
-  const [username, setUsername] = useState("");
-  const [showUsernameModal, setShowUsernameModal] = useState(false);
-  const [onlineUsers, setOnlineUsers] = useState([]);
-  const [showUserList, setShowUserList] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [typingUsers, setTypingUsers] = useState([]);
-  const [connectionStatus, setConnectionStatus] = useState("connecting");
+const App = () => {
+  const {
+    messages,
+    onlineUsers,
+    typingUsers,
+    connectionStatus,
+    username,
+    userId,
+    sendMessage,
+    emitTyping,
+    changeUsername
+  } = useChatSocket();
 
-  // Refs
+  const [messageInput, setMessageInput] = useState("");
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+  const [showUserList, setShowUserList] = useState(false);
   const messagesEndRef = useRef(null);
   const messageInputRef = useRef(null);
 
-  // Connect to socket.io server
-  useEffect(() => {
-    // Use environment variable for server URL
-    const serverUrl = "http://localhost:5000";
-    const newSocket = io(serverUrl);
-
-    setSocket(newSocket);
-
-    // Set connection status
-    newSocket.on("connect", () => {
-      setConnectionStatus("connected");
-    });
-
-    newSocket.on("disconnect", () => {
-      setConnectionStatus("disconnected");
-    });
-
-    newSocket.on("connect_error", () => {
-      setConnectionStatus("error");
-    });
-
-    // Clean up on component unmount
-    return () => {
-      newSocket.disconnect();
-    };
-  }, []);
-
-  // Setup event listeners
-  useEffect(() => {
-    if (!socket) return;
-
-    // Handle connection established
-    socket.on("connection_established", (data) => {
-      setUserId(data.userId);
-      setUsername(data.username);
-    });
-
-    // Handle incoming messages
-    socket.on("message", (message) => {
-      setMessages((prevMessages) => [...prevMessages, message]);
-    });
-
-    // Handle online users
-    socket.on("online_users", (users) => {
-      setOnlineUsers(users);
-    });
-
-    // Handle typing indicator
-    socket.on("user_typing", (data) => {
-      if (data.isTyping) {
-        setTypingUsers((prev) => {
-          if (!prev.find((user) => user.userId === data.userId)) {
-            return [...prev, { userId: data.userId, username: data.username }];
-          }
-          return prev;
-        });
-      } else {
-        setTypingUsers((prev) =>
-          prev.filter((user) => user.userId !== data.userId)
-        );
-      }
-    });
-
-    // Clean up listeners on component unmount
-    return () => {
-      socket.off("connection_established");
-      socket.off("message");
-      socket.off("online_users");
-      socket.off("user_typing");
-    };
-  }, [socket]);
-
-  // Scroll to bottom when messages change
+  // Scroll to bottom on new message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Handle send message
   const handleSendMessage = (e) => {
     e.preventDefault();
 
-    if (!messageInput.trim() || !socket) return;
+    if (!messageInput.trim()) return;
 
-    socket.emit("send_message", { text: messageInput });
+    sendMessage(messageInput);
     setMessageInput("");
-
-    // Focus back on input after sending
     messageInputRef.current?.focus();
-
-    // Clear typing indicator
-    socket.emit("typing", { isTyping: false });
-    setIsTyping(false);
+    emitTyping(false);
   };
 
-  // Handle typing indicator
   const handleTyping = (e) => {
-    setMessageInput(e.target.value);
+    const value = e.target.value;
 
-    if (!socket) return;
-
-    if (isTyping && !e.target.value) {
-      socket.emit("typing", { isTyping: false });
-      setIsTyping(false);
-    } else {
-      if (!isTyping) {
-        socket.emit("typing", { isTyping: true });
-        setIsTyping(true);
-      }
-    }
-  };
-
-  // Handle change username
-  const handleChangeUsername = (newUsername) => {
-    if (!newUsername.trim() || !socket) return;
-
-    socket.emit("change_username", { username: newUsername });
-    setUsername(newUsername);
-    setShowUsernameModal(false);
+    setMessageInput(value);
+    emitTyping(Boolean(value.trim()));
   };
 
   return (
@@ -168,7 +77,7 @@ function App() {
 
             <button
               className="show-users-btn"
-              onClick={() => setShowUserList(!showUserList)}
+              onClick={() => setShowUserList((prev) => !prev)}
             >
               <FiUsers />
               <span>{onlineUsers.length}</span>
@@ -179,26 +88,22 @@ function App() {
         <div className="chat-main">
           <div className="messages-container">
             {messages.length === 0 ? (
-              <div className="no-messages">
-                <p>No messages yet. Start the conversation!</p>
-              </div>
+              <p className="no-messages">No messages yet. Start the conversation!</p>
             ) : (
-              messages.map((message) => (
+              messages.map((msg) => (
                 <ChatMessage
-                  key={message.id}
-                  message={message}
-                  isOwnMessage={message.userId === userId}
+                  key={msg.id}
+                  message={msg}
+                  isOwnMessage={msg.userId === userId}
                 />
               ))
             )}
 
             {typingUsers.length > 0 && (
               <div className="typing-indicator">
-                {typingUsers.length === 1 ? (
-                  <p>{typingUsers[0].username} is typing...</p>
-                ) : (
-                  <p>Multiple people are typing...</p>
-                )}
+                {typingUsers.length === 1
+                  ? `${typingUsers[0].username} is typing...`
+                  : "Multiple people are typing..."}
               </div>
             )}
 
@@ -235,7 +140,10 @@ function App() {
       {showUsernameModal && (
         <UsernameModal
           currentUsername={username}
-          onSubmit={handleChangeUsername}
+          onSubmit={(name) => {
+            changeUsername(name);
+            setShowUsernameModal(false);
+          }}
           onClose={() => setShowUsernameModal(false)}
         />
       )}

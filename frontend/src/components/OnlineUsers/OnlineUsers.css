@@ -1,6 +1,5 @@
 .online-users {
   position: absolute;
-  top: 50px;
   right: 10px;
   width: 250px;
   background: white;
@@ -11,7 +10,7 @@
 .online-users-header {
   display: flex;
   justify-content: space-between;
-  padding: 10px;
+  padding: 0 10px;
   border-bottom: 1px solid #ddd;
 }
 

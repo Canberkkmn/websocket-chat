@@ -1,16 +1,15 @@
 import React from "react";
 import { format } from "date-fns";
+
 import "./ChatMessage.css";
 
 const ChatMessage = ({ message, isOwnMessage }) => {
-  // Determine message class
   const messageClass = isOwnMessage
     ? "message own-message"
     : message.type === "system"
     ? "message system-message"
     : "message other-message";
 
-  // Format timestamp
   const formattedTime = format(new Date(message.timestamp), "HH:mm");
 
   return (

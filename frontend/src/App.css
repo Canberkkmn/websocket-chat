@@ -1,5 +1,9 @@
-app {
-  height: 100vh;
+body {
+  margin: 0;
+}
+
+.app {
+  height: calc(100vh - 40px);
   display: flex;
   flex-direction: column;
   padding: 20px;

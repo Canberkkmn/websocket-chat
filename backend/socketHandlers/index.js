@@ -93,7 +93,7 @@ function handleChangeUsername(socket, io) {
 
     // Notify all users about the username change
     io.emit("message", {
-      id: "system",
+      id: uuidv4(),
       username: "System",
       text: `${oldUsername} changed their name to ${user.username}`,
       timestamp: Date.now(),
@@ -133,16 +133,16 @@ function handleDisconnect(socket, io) {
   socket.on("disconnect", () => {
     const user = users.get(socket.id);
 
-    if (!user) return;
-
-    console.log(`User disconnected: ${user.id}`);
+    if (!user) {
+      return;
+    }
 
     // Remove user from map
     users.delete(socket.id);
 
     // Notify others that user has left
     io.emit("message", {
-      id: "system",
+      id: uuidv4(),
       username: "System",
       text: `${user.username} has left the chat`,
       timestamp: Date.now(),

@@ -1,5 +1,6 @@
 const { v4: uuidv4 } = require("uuid");
 const { sanitizeMessage } = require("../utils");
+const config = require("../config");
 
 // Store user information
 const users = new Map();
@@ -10,6 +11,8 @@ const users = new Map();
  */
 function setupSocketHandlers(io) {
   io.on("connection", (socket) => {
+    console.log(`[Server ${config.PORT}] New connection: ${socket.id}`);
+
     handleConnection(socket, io);
     handleSendMessage(socket, io);
     handleChangeUsername(socket, io);

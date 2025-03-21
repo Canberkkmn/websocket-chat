@@ -19,11 +19,6 @@ const io = new Server(server, {
 const pubClient = createClient({ url: "redis://localhost:6379" });
 const subClient = pubClient.duplicate();
 
-// Start the server
-server.listen(config.PORT, () => {
-  console.log(`Server running on port ${config.PORT}`);
-});
-
 Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
   io.adapter(createAdapter(pubClient, subClient));
 

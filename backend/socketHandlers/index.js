@@ -88,6 +88,7 @@ function handleChangeUsername(socket, io) {
     if (!user) return;
 
     const oldUsername = user.username;
+    
     user.username = sanitizeMessage(data.username).substring(0, 20);
     users.set(socket.id, user);
 

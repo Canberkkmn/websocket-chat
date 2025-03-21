@@ -25,7 +25,6 @@ function App() {
   // Refs
   const messagesEndRef = useRef(null);
   const messageInputRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
 
   // Connect to socket.io server
   useEffect(() => {
@@ -119,10 +118,6 @@ function App() {
     // Clear typing indicator
     socket.emit("typing", { isTyping: false });
     setIsTyping(false);
-
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
   };
 
   // Handle typing indicator
@@ -131,21 +126,15 @@ function App() {
 
     if (!socket) return;
 
-    if (!isTyping) {
-      socket.emit("typing", { isTyping: true });
-      setIsTyping(true);
-    }
-
-    // Clear existing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    // Set new timeout
-    typingTimeoutRef.current = setTimeout(() => {
+    if (isTyping && !e.target.value) {
       socket.emit("typing", { isTyping: false });
       setIsTyping(false);
-    }, 2000);
+    } else {
+      if (!isTyping) {
+        socket.emit("typing", { isTyping: true });
+        setIsTyping(true);
+      }
+    }
   };
 
   // Handle change username

@@ -43,7 +43,7 @@ function handleConnection(socket, io) {
 
   // Welcome message
   io.emit("message", {
-    id: "system",
+    id: uuidv4(),
     username: "System",
     text: `${users.get(socket.id).username} has joined the chat`,
     timestamp: Date.now(),
